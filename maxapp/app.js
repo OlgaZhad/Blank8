@@ -18,116 +18,170 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // Заголовок с подсветкой: фрагмент в *звёздочках* становится синим.
+  function title(s) {
+    return esc(s).replace(/\*(.+?)\*/g, '<span class="hl">$1</span>');
+  }
+
+  function plain(s) {
+    return String(s == null ? '' : s).replace(/\*/g, '');
+  }
+
   function el(html) {
     var t = document.createElement('template');
     t.innerHTML = html.trim();
     return t.content.firstElementChild;
   }
 
-  function applyTheme() {
-    document.documentElement.setAttribute('data-theme', B.colorScheme === 'dark' ? 'dark' : 'light');
+  function pad(n) {
+    return (n < 10 ? '0' : '') + n;
   }
 
-  function chevron() {
-    return '<svg class="card__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  // Eyebrow-метка «01  РАЗДЕЛ ———»
+  function eyebrow(num, label) {
+    return '<div class="eyebrow">' + (num ? '<span class="eyebrow__num">' + esc(num) + '</span>' : '') + '<span>' + esc(label) + '</span></div>';
+  }
+
+  function list(items, kind) {
+    return '<ul class="list list--' + kind + '">' + items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
   }
 
   /* ---------- экраны ---------- */
 
   function renderHome() {
     var user = B.user;
-    var greeting = user && user.first_name
-      ? '<span class="greeting">Здравствуйте, ' + esc(user.first_name) + '!</span>'
-      : '';
+    var hello = user && user.first_name ? 'Здравствуйте, ' + user.first_name : C.hero.eyebrow;
 
-    var numbers = C.numbers.map(function (n) {
-      return '<div class="number"><span class="number__value">' + esc(n.value) + '</span><span class="number__label">' + esc(n.label) + '</span></div>';
+    var facts = C.facts.map(function (f) {
+      return '<div class="fact"><span class="fact__value">' + esc(f.value) + '</span><span class="fact__label">' + esc(f.label) + '</span></div>';
     }).join('');
 
-    var services = C.services.map(function (s) {
-      return serviceCard(s);
-    }).join('');
-
-    var reviews = C.reviews.map(function (r) {
-      return '<article class="review"><p class="review__text">' + esc(r.text) + '</p><p class="review__author">' + esc(r.author) + '</p></article>';
+    var principles = C.principles.map(function (p, i) {
+      return '<div class="row"><span class="row__num">' + pad(i + 1) + '</span><div><h3>' + esc(p.title) + '</h3><p class="row__text">' + esc(p.text) + '</p></div></div>';
     }).join('');
 
     return el(
       '<div class="screen">' +
-        '<section class="hero">' + greeting +
-          '<h1>' + esc(C.hero.title) + '</h1>' +
+        '<section class="hero">' +
+          eyebrow('', hello) +
+          '<h1>' + title(C.hero.title) + '</h1>' +
           '<p class="lead">' + esc(C.hero.text) + '</p>' +
           '<div class="btn-row">' +
             '<button class="btn btn--primary" data-nav="' + esc(C.hero.primary.nav) + '">' + esc(C.hero.primary.label) + '</button>' +
-            '<button class="btn btn--ghost" data-nav="' + esc(C.hero.secondary.nav) + '">' + esc(C.hero.secondary.label) + '</button>' +
+            '<button class="btn btn--outline" data-nav="' + esc(C.hero.secondary.nav) + '">' + esc(C.hero.secondary.label) + ' →</button>' +
           '</div>' +
+          '<div class="facts">' + facts + '</div>' +
         '</section>' +
-        '<section><div class="numbers">' + numbers + '</div></section>' +
-        '<section><h2>Чем помогаем</h2>' + services + '</section>' +
-        '<section><h2>Что говорят руководители</h2><div class="reviews">' + reviews + '</div></section>' +
-        contactsBlock() +
-        '<p class="footer-note">' + esc(C.brand.name) + ' · ' + esc(C.brand.tagline) + '</p>' +
+        '<section>' + eyebrow('01', 'Услуги') + '<h2>Чем помогаем</h2>' + C.services.map(serviceCard).join('') + '</section>' +
+        '<section>' + eyebrow('02', 'Как работаем') + '<h2>Спокойно и по делу</h2><div class="rows">' + principles + '</div></section>' +
+        contactsBlock('03') +
+        footer() +
       '</div>'
     );
   }
 
-  function serviceCard(s) {
+  function serviceCard(s, i) {
     var nav = s.nav || 'lead';
-    var badge = s.featured ? '<span class="badge">Подробно</span>' : '';
-    return '<button type="button" class="card card--tap' + (s.featured ? ' card--featured' : '') + '" data-nav="' + esc(nav) + '" data-topic="' + esc(s.title) + '">' +
-      '<span class="card__body">' + badge + '<span class="card__title">' + esc(s.title) + '</span><span class="card__text">' + esc(s.short) + '</span></span>' +
-      chevron() +
+    var chip = s.featured ? '<span class="chip">Подробно</span>' : '';
+    return '<button type="button" class="card card--tap' + (s.featured ? ' card--featured' : '') + '" data-nav="' + esc(nav) + '" data-topic="' + esc(s.topic || s.title) + '">' +
+      '<span class="card__num">' + pad(i + 1) + '</span>' +
+      '<span class="card__body">' + chip + '<span class="card__title">' + esc(s.title) + '</span><span class="card__text">' + esc(s.short) + '</span></span>' +
+      '<span class="card__arrow" aria-hidden="true">→</span>' +
     '</button>';
   }
 
   function renderServices() {
     return el(
       '<div class="screen">' +
-        '<h1>Услуги</h1>' +
-        '<p class="lead">Работаем только с детскими центрами, школами и садами, поэтому не тратим ваше время на объяснение, как устроен набор групп.</p>' +
+        eyebrow('01', 'Услуги') +
+        '<h1>Три части, которые <span class="hl">работают вместе</span></h1>' +
+        '<p class="lead">Веб, маркетинг, брендинг. Соцсети приводят клиента, сайт его убеждает, бренд удерживает. Можно взять одно направление или всё сразу.</p>' +
         '<section>' + C.services.map(serviceCard).join('') + '</section>' +
-        '<div class="btn-row"><button class="btn btn--accent" data-nav="lead">Оставить заявку</button></div>' +
+        '<div class="btn-row"><button class="btn btn--primary" data-nav="lead">Написать в MAX</button></div>' +
       '</div>'
     );
   }
 
   function renderMarketing() {
     var m = C.marketing;
+    var n = 0;
+    function head(label, h) {
+      n += 1;
+      return eyebrow(pad(n), label) + '<h2>' + esc(h) + '</h2>';
+    }
 
-    var forWhom = '<ul class="check-list">' + m.forWhom.items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
-
-    var includes = m.includes.items.map(function (i) {
-      return '<div class="card"><h3>' + esc(i.title) + '</h3><p class="card__text">' + esc(i.text) + '</p></div>';
+    var forWhom = m.forWhom.items.map(function (p) {
+      return '<div class="card portrait">' +
+        '<div class="portrait__label">' + esc(p.label) + '</div>' +
+        '<h3>' + esc(p.title) + '</h3>' +
+        '<dl><div><dt class="terra">Боль</dt><dd>' + esc(p.pain) + '</dd></div>' +
+        '<div><dt class="blue">Что получит</dt><dd>' + esc(p.gets) + '</dd></div></dl>' +
+      '</div>';
     }).join('');
 
-    var steps = '<ol class="steps">' + m.steps.items.map(function (s) {
-      return '<li><div><h3>' + esc(s.title) + '</h3><p class="steps__text">' + esc(s.text) + '</p></div></li>';
+    var includes = '<div class="grid-2">' + m.includes.items.map(function (i) {
+      return '<div class="card"><h3>' + esc(i.title) + '</h3><p>' + esc(i.text) + '</p></div>';
+    }).join('') + '</div>';
+
+    var steps = '<ol class="steps">' + m.steps.items.map(function (s, i) {
+      return '<li><span class="steps__num">' + pad(i + 1) + '</span><div><h3>' + esc(s.title) + '</h3><p class="steps__text">' + esc(s.text) + '</p></div></li>';
     }).join('') + '</ol>';
 
-    var formats = m.formats.items.map(function (f) {
-      return '<div class="card"><h3>' + esc(f.title) + '</h3><p class="card__text">' + esc(f.text) + '</p></div>';
-    }).join('');
+    var c = m.caseStudy;
+    var caseCard =
+      '<div class="card case">' +
+        '<div class="case__head"><span class="case__label">' + esc(c.label) + '</span><span class="chip chip--ok" style="margin:0">' + esc(c.status) + '</span></div>' +
+        '<div class="case__value">' + esc(c.value) + '</div>' +
+        '<p class="case__caption">' + esc(c.caption) + '</p>' +
+        '<div class="case__compare">' +
+          '<div><div class="case__k">Было</div><div class="case__v case__v--old">' + esc(c.before) + '</div></div>' +
+          '<span class="case__arrow">→</span>' +
+          '<div><div class="case__k">Стало</div><div class="case__v">' + esc(c.after) + '</div></div>' +
+          '<div class="case__delta">' + esc(c.delta) + '</div>' +
+        '</div>' +
+        '<p class="case__text">' + esc(c.text) + '</p>' +
+      '</div>';
 
-    var results = '<ul class="check-list">' + m.results.items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
+    var p = m.pricing;
+    var price =
+      '<div class="card price">' +
+        '<span class="case__label">' + esc(p.label) + '</span>' +
+        '<div class="price__value">' + esc(p.price) + '</div>' +
+        list(p.items, 'check') +
+        '<p class="price__note">' + esc(p.note) + '</p>' +
+      '</div>';
 
-    var faq = m.faq.items.map(function (f) {
+    var dd =
+      '<div class="dd">' +
+        '<div class="card yes"><h3>Делаем</h3>' + list(m.doAndDont.yes, 'check') + '</div>' +
+        '<div class="card no"><h3>Не делаем</h3>' + list(m.doAndDont.no, 'cross') + '</div>' +
+      '</div>';
+
+    var faq = '<div class="faqs">' + m.faq.items.map(function (f) {
       return '<details class="faq"><summary>' + esc(f.q) + '</summary><div class="faq__answer">' + esc(f.a) + '</div></details>';
-    }).join('');
+    }).join('') + '</div>';
 
     return el(
       '<div class="screen">' +
-        '<span class="badge">Услуга</span>' +
-        '<h1>' + esc(m.title) + '</h1>' +
+        eyebrow('', m.eyebrow) +
+        '<h1>' + title(m.title) + '</h1>' +
         '<p class="lead">' + esc(m.lead) + '</p>' +
-        '<section><h2>' + esc(m.forWhom.title) + '</h2>' + forWhom + '</section>' +
-        '<section><h2>' + esc(m.includes.title) + '</h2>' + includes + '</section>' +
-        '<section><h2>' + esc(m.steps.title) + '</h2>' + steps + '</section>' +
-        '<section><h2>' + esc(m.formats.title) + '</h2>' + formats + '</section>' +
-        '<section><h2>' + esc(m.results.title) + '</h2>' + results + '</section>' +
-        '<section><h2>' + esc(m.faq.title) + '</h2>' + faq + '</section>' +
-        '<div class="btn-row">' +
-          '<button class="btn btn--accent" data-nav="' + esc(m.cta.nav) + '" data-topic="' + esc(m.cta.topic) + '">' + esc(m.cta.label) + '</button>' +
-          '<button class="btn btn--link" data-action="share">Поделиться с коллегой</button>' +
+        '<div class="blank-line" aria-hidden="true"></div>' +
+        '<section>' + head('Аудитория', m.forWhom.title) + forWhom + '</section>' +
+        '<section>' + head('Состав', m.includes.title) + includes + '</section>' +
+        '<section>' + head('Процесс', m.steps.title) + steps + '</section>' +
+        '<section>' + head('Результат', 'Как это выглядит в цифрах') + caseCard + '</section>' +
+        '<section>' + head('Стоимость', 'С чего начать') + price + '</section>' +
+        '<section>' + head('Принципы', m.doAndDont.title) + dd + '</section>' +
+        '<section>' + head('Вопросы', m.faq.title) + faq + '</section>' +
+        '<div class="cta-block">' +
+          eyebrow('', 'Следующий шаг') +
+          '<h2>' + esc(m.cta.title) + '</h2>' +
+          '<p>' + esc(m.cta.text) + '</p>' +
+          '<div class="btn-row">' +
+            '<button class="btn btn--primary" data-nav="' + esc(m.cta.nav) + '" data-topic="' + esc(m.cta.topic) + '">' + esc(m.cta.label) + '</button>' +
+            '<button class="btn btn--link" data-action="share">Поделиться с коллегой</button>' +
+          '</div>' +
         '</div>' +
       '</div>'
     );
@@ -144,18 +198,19 @@
 
     var screen = el(
       '<div class="screen">' +
-        '<h1>' + esc(L.title) + '</h1>' +
+        eyebrow('', L.eyebrow) +
+        '<h1>' + title(L.title) + '</h1>' +
         '<p class="lead">' + esc(L.text) + '</p>' +
-        '<form class="lead-form" novalidate style="margin-top:20px">' +
+        '<form class="form" novalidate>' +
           '<div class="field"><label for="f-name">Как к вам обращаться</label><input id="f-name" name="name" autocomplete="name" value="' + esc(name) + '" required><span class="error">Напишите имя</span></div>' +
-          '<div class="field"><label for="f-contact">Телефон или мессенджер</label><input id="f-contact" name="contact" autocomplete="tel" inputmode="tel" required><span class="error">Оставьте контакт, чтобы мы могли ответить</span></div>' +
-          '<div class="field"><label for="f-center">Название центра или школы</label><input id="f-center" name="center"></div>' +
+          '<div class="field"><label for="f-contact">Телефон или ник в MAX</label><input id="f-contact" name="contact" autocomplete="tel" inputmode="tel" required><span class="error">Оставьте контакт, чтобы мы могли ответить</span></div>' +
+          '<div class="field"><label for="f-company">Компания или сайт</label><input id="f-company" name="company"></div>' +
           '<div class="field"><label for="f-topic">Что интересует</label><select id="f-topic" name="topic">' + options + '</select></div>' +
-          '<div class="field"><label for="f-msg">Пара слов о задаче</label><textarea id="f-msg" name="message"></textarea></div>' +
-          '<div class="btn-row"><button class="btn btn--accent" type="submit">Отправить заявку</button></div>' +
+          '<div class="field"><label for="f-msg">Задача своими словами</label><textarea id="f-msg" name="message" placeholder="Например: заявки с сайта стали дорогими, хотим разобраться почему"></textarea></div>' +
+          '<div class="btn-row"><button class="btn btn--primary" type="submit">Отправить в MAX</button></div>' +
           '<p class="consent">' + esc(L.consent) + '</p>' +
         '</form>' +
-        contactsBlock() +
+        contactsBlock('') +
       '</div>'
     );
 
@@ -163,20 +218,24 @@
     return screen;
   }
 
-  function contactsBlock() {
+  function contactsBlock(num) {
     var b = C.brand;
     var items = [];
-    if (b.phone) items.push(contact('Телефон', b.phone, 'tel:' + b.phone.replace(/[^\d+]/g, '')));
+    if (b.phone) items.push(contact('Телефон · MAX', b.phone, 'tel:' + b.phone.replace(/[^\d+]/g, '')));
     if (b.email) items.push(contact('Почта', b.email, 'mailto:' + b.email));
-    if (b.telegram) items.push(contact('Telegram', b.telegram, b.telegram));
-    if (b.max) items.push(contact('MAX', b.max, b.max));
+    if (b.telegram) items.push(contact('Канал в Telegram', '@' + b.telegram.split('/').pop(), b.telegram));
+    if (b.vk) items.push(contact('ВКонтакте', b.vk.replace(/^https?:\/\//, ''), b.vk));
     if (b.site) items.push(contact('Сайт', b.site.replace(/^https?:\/\//, ''), b.site));
     if (!items.length) return '';
-    return '<section><h2>Контакты</h2><div class="contacts">' + items.join('') + '</div></section>';
+    return '<section>' + eyebrow(num, 'Контакты') + '<h2>Где мы на связи</h2><div class="contacts">' + items.join('') + '</div></section>';
   }
 
   function contact(label, text, href) {
-    return '<a class="contact" href="' + esc(href) + '" data-external="1"><span><span class="contact__label">' + esc(label) + '</span>' + esc(text) + '</span></a>';
+    return '<a class="contact" href="' + esc(href) + '" data-external="1"><span><span class="contact__label">' + esc(label) + '</span>' + esc(text) + '</span><span class="contact__arrow" aria-hidden="true">→</span></a>';
+  }
+
+  function footer() {
+    return '<p class="footer-note"><img src="assets/logo-wordmark.png" alt="">' + esc(C.brand.name) + ' — ' + esc(C.brand.tagline.toLowerCase()) + '. ' + esc(C.brand.legal) + '</p>';
   }
 
   /* ---------- заявка ---------- */
@@ -198,7 +257,7 @@
     var data = {
       name: form.elements.name.value.trim(),
       contact: form.elements.contact.value.trim(),
-      center: form.elements.center.value.trim(),
+      company: form.elements.company.value.trim(),
       topic: form.elements.topic.value,
       message: form.elements.message.value.trim(),
       source: B.available ? 'max-miniapp' : 'web',
@@ -216,22 +275,22 @@
       form.replaceWith(el('<div class="notice">' + esc(C.lead.success) + '</div>'));
     }, function () {
       button.disabled = false;
-      button.textContent = 'Отправить заявку';
+      button.textContent = 'Отправить в MAX';
       var note = form.querySelector('.notice--error');
-      if (!note) form.appendChild(el('<div class="notice notice--error" style="margin-top:12px">Не получилось отправить. Попробуйте ещё раз или напишите нам напрямую.</div>'));
+      if (!note) form.appendChild(el('<div class="notice notice--error">Не получилось отправить. Попробуйте ещё раз или позвоните: ' + esc(C.brand.phone) + '</div>'));
     });
   }
 
   function leadText(data) {
-    return [
+    var lines = [
       'Заявка из мини-приложения',
       'Имя: ' + data.name,
-      'Контакт: ' + data.contact,
-      data.center ? 'Центр: ' + data.center : '',
-      'Тема: ' + data.topic,
-      data.message ? '' : null,
-      data.message
-    ].filter(function (l) { return l !== null && l !== ''; }).join('\n');
+      'Контакт: ' + data.contact
+    ];
+    if (data.company) lines.push('Компания: ' + data.company);
+    lines.push('Тема: ' + data.topic);
+    if (data.message) lines.push('', data.message);
+    return lines.join('\n');
   }
 
   function sendLead(data) {
@@ -297,7 +356,7 @@
     if (name === 'lead') {
       B.mainButton.hide(submitFromMainButton);
     } else {
-      B.mainButton.show('Оставить заявку', submitFromMainButton);
+      B.mainButton.show('Написать в MAX', submitFromMainButton);
     }
   }
 
@@ -334,11 +393,6 @@
 
   /* ---------- старт ---------- */
 
-  applyTheme();
-  B.onThemeChanged(applyTheme);
-  if (window.matchMedia) {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-  }
   B.init();
   navigate('home', null, true);
 })();

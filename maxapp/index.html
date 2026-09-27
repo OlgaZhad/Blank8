@@ -3,12 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f3d8c">
+  <meta name="theme-color" content="#FAF8F3">
+  <link rel="icon" type="image/png" href="assets/logo-mark-blue.png">
   <title>Восьмой Бланк</title>
-  <meta name="description" content="Мини-приложение агентства «Восьмой Бланк» для мессенджера MAX: услуги, маркетинг для детских центров и школ, заявка на консультацию.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="description" content="Мини-приложение агентства «Восьмой Бланк» для мессенджера MAX: маркетинг под ключ, сайты, брендинг и заявка прямо в MAX.">
+  <link rel="preload" href="assets/fonts/montserrat-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <!-- MAX Bridge: даёт window.WebApp внутри мессенджера. В обычном браузере приложение работает без него. -->
   <script src="https://st.max.ru/js/max-web-app.js"></script>
@@ -17,10 +16,9 @@
   <div id="app" class="app">
     <header class="topbar">
       <a class="brand" href="#home" data-nav="home">
-        <span class="brand__mark" aria-hidden="true">8</span>
-        <span class="brand__name">Восьмой Бланк</span>
+        <img src="assets/logo-wordmark.png" alt="Восьмой Бланк" width="113" height="22">
       </a>
-      <button class="topbar__cta" type="button" data-nav="lead">Заявка</button>
+      <button class="topbar__cta" type="button" data-nav="lead">Написать</button>
     </header>
 
     <main id="view" class="view" aria-live="polite"></main>

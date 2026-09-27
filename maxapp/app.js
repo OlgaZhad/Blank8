@@ -222,6 +222,18 @@
     });
   }
 
+  function leadText(data) {
+    return [
+      'Заявка из мини-приложения',
+      'Имя: ' + data.name,
+      'Контакт: ' + data.contact,
+      data.center ? 'Центр: ' + data.center : '',
+      'Тема: ' + data.topic,
+      data.message ? '' : null,
+      data.message
+    ].filter(function (l) { return l !== null && l !== ''; }).join('\n');
+  }
+
   function sendLead(data) {
     // 1. Свой бэкенд, если указан.
     if (C.brand.leadEndpoint) {
@@ -233,19 +245,17 @@
         if (!r.ok) throw new Error('HTTP ' + r.status);
       });
     }
-    // 2. Бот, который открыл мини-приложение.
+    // 2. Основной путь: заявка уходит боту, который открыл мини-приложение в MAX.
     if (B.available && B.sendData(data)) return Promise.resolve();
-    // 3. Почта — если адрес указан в content.js.
+    // 3. Открыли из браузера: копируем текст заявки и ведём в чат с ботом в MAX.
+    if (C.brand.maxBot) {
+      var text = leadText(data);
+      var copy = navigator.clipboard ? navigator.clipboard.writeText(text).catch(function () {}) : Promise.resolve();
+      return copy.then(function () { B.openLink(C.brand.maxBot); });
+    }
+    // 4. Почта — если адрес указан в content.js.
     if (C.brand.email) {
-      var body = [
-        'Имя: ' + data.name,
-        'Контакт: ' + data.contact,
-        'Центр: ' + data.center,
-        'Тема: ' + data.topic,
-        '',
-        data.message
-      ].join('\n');
-      B.openLink('mailto:' + C.brand.email + '?subject=' + encodeURIComponent('Заявка: ' + data.topic) + '&body=' + encodeURIComponent(body));
+      B.openLink('mailto:' + C.brand.email + '?subject=' + encodeURIComponent('Заявка: ' + data.topic) + '&body=' + encodeURIComponent(leadText(data)));
       return Promise.resolve();
     }
     return Promise.reject(new Error('Не настроен ни один канал отправки заявок'));
